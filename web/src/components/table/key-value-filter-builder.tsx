@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import isEqual from "lodash/isEqual";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
 import {
@@ -90,6 +91,13 @@ export function KeyValueFilterBuilder(props: KeyValueFilterBuilderProps) {
     | NumericKeyValueFilterEntry[]
     | StringKeyValueFilterEntry[]
   >(() => (activeFilters.length > 0 ? activeFilters : []));
+  const prevActiveFiltersRef = useRef(activeFilters);
+
+  useEffect(() => {
+    if (isEqual(prevActiveFiltersRef.current, activeFilters)) return;
+    prevActiveFiltersRef.current = activeFilters;
+    setLocalFilters(activeFilters.length > 0 ? activeFilters : []);
+  }, [activeFilters]);
 
   const handleFilterChange = (
     index: number,
@@ -186,6 +194,14 @@ export function KeyValueFilterBuilder(props: KeyValueFilterBuilderProps) {
         const availableValuesForKey = filter.key
           ? (availableValues[filter.key] ?? [])
           : [];
+        const mergedKeyOptions = Array.from(
+          new Set(
+            [
+              ...(keyOptions ?? []),
+              ...localFilters.map((item) => item.key),
+            ].filter((value) => value.length > 0),
+          ),
+        );
 
         return (
           <div
@@ -194,7 +210,7 @@ export function KeyValueFilterBuilder(props: KeyValueFilterBuilderProps) {
           >
             {/* Key input and delete button row */}
             <div className="flex items-center gap-2">
-              {keyOptions ? (
+              {mergedKeyOptions.length > 0 ? (
                 // Combobox for known keys
                 <Popover
                   open={openPopoverIndex === index}
@@ -225,7 +241,7 @@ export function KeyValueFilterBuilder(props: KeyValueFilterBuilderProps) {
                       <InputCommandList>
                         <InputCommandEmpty>No keys found.</InputCommandEmpty>
                         <InputCommandGroup>
-                          {keyOptions.map((option) => (
+                          {mergedKeyOptions.map((option) => (
                             <InputCommandItem
                               key={option}
                               value={option}
