@@ -240,16 +240,23 @@ export const TableViewPresetsRouter = createTRPCRouter({
 
       let viewName = input.viewName;
 
-      // For non-system presets, always validate viewId exists and get viewName
+      // For non-system presets, always validate viewId exists and get viewName.
+      // Frontend-defined `__langfuse_` presets still pass the viewName directly.
       if (!input.viewId.startsWith("__langfuse_")) {
         const view = await TableViewService.getTableViewPresetsById(
           input.viewId,
           input.projectId,
         );
-        // Use provided viewName or infer from view's tableName
+
+        if (viewName && viewName !== view.tableName) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "viewName does not match the selected view",
+          });
+        }
+
         viewName = viewName ?? view.tableName;
       } else if (!viewName) {
-        // System presets require explicit viewName
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "viewName is required for system presets",

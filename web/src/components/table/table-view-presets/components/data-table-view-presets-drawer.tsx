@@ -495,7 +495,118 @@ export function TableViewPresetsDrawer({
                       defaultAssignments?.userDefaultViewId === view.id;
                     const isProjectDefault =
                       defaultAssignments?.projectDefaultViewId === view.id;
+                    const isSystemView = view.isSystem === true;
                     const previewText = summarizeTableViewPreset(view);
+
+                    if (isSystemView) {
+                      return (
+                        <CommandItem
+                          key={view.id}
+                          onSelect={() => handleSelectView(view)}
+                          className={cn(
+                            "hover:bg-muted/50 group mt-1 flex cursor-pointer items-center justify-between rounded-md p-2 transition-colors",
+                            selectedViewId === view.id && "bg-muted",
+                          )}
+                        >
+                          <div className="flex min-w-0 flex-1 flex-col">
+                            <div className="flex items-center gap-2">
+                              <span className="flex items-center gap-1.5 text-sm">
+                                <LangfuseIcon size={14} />
+                                {view.name}
+                              </span>
+                              {isUserDefault && (
+                                <Badge variant="secondary" className="text-xs">
+                                  Your default
+                                </Badge>
+                              )}
+                              {isProjectDefault && (
+                                <Badge variant="outline" className="text-xs">
+                                  Project default
+                                </Badge>
+                              )}
+                            </div>
+                            {view.description ? (
+                              <span className="text-muted-foreground w-fit pl-0 text-xs">
+                                {view.description}
+                              </span>
+                            ) : null}
+                          </div>
+                          <div className="flex flex-row gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleGeneratePermalink(view.id);
+                              }}
+                              className="w-4 opacity-0 group-hover:opacity-100 peer-data-[state=open]:opacity-100"
+                            >
+                              <Link className="h-4 w-4" />
+                            </Button>
+                            <DropdownMenu
+                              open={dropdownId === view.id}
+                              onOpenChange={(open) => {
+                                setDropdownId(open ? view.id : null);
+                              }}
+                            >
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                  }}
+                                  className="opacity-0 group-hover:opacity-100 data-[state=open]:opacity-100"
+                                >
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent className="flex flex-col *:w-full *:justify-start">
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (isUserDefault) {
+                                      clearViewDefault("user");
+                                    } else {
+                                      setViewAsDefault(view.id, "user");
+                                    }
+                                    setDropdownId(null);
+                                  }}
+                                  disabled={isSettingDefault}
+                                >
+                                  {isUserDefault ? (
+                                    <>Remove as my default</>
+                                  ) : (
+                                    <>Set as my default</>
+                                  )}
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (isProjectDefault) {
+                                      clearViewDefault("project");
+                                    } else {
+                                      setViewAsDefault(view.id, "project");
+                                    }
+                                    setDropdownId(null);
+                                  }}
+                                  disabled={!hasWriteAccess || isSettingDefault}
+                                >
+                                  {isProjectDefault ? (
+                                    <>Remove as project default</>
+                                  ) : (
+                                    <>Set as project default</>
+                                  )}
+                                  {!hasWriteAccess && (
+                                    <Lock className="ml-auto h-4 w-4" />
+                                  )}
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        </CommandItem>
+                      );
+                    }
 
                     return (
                       <CommandItem

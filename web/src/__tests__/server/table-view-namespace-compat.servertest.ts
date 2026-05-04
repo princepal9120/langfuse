@@ -4,6 +4,7 @@ import { prisma } from "@langfuse/shared/src/db";
 import {
   createOrgProjectAndApiKey,
   DefaultViewService,
+  getSystemTableViewPresetByTableAndId,
   TableViewService,
 } from "@langfuse/shared/src/server";
 import { randomUUID } from "crypto";
@@ -49,6 +50,66 @@ describe("table view namespace compatibility", () => {
     );
 
     expect(presets.map((preset) => preset.id)).toContain(legacyPreset.id);
+  });
+
+  it("includes built-in system presets in the events table API list", async () => {
+    const { projectId } = await createOrgProjectAndApiKey();
+
+    const presets = await TableViewService.getTableViewPresetsByTableName(
+      TableViewPresetTableName.ObservationsEvents,
+      projectId,
+    );
+
+    expect(
+      presets.filter((preset) => preset.isSystem).map((preset) => preset.name),
+    ).toEqual([
+      "Trace List",
+      "LLM Generations",
+      "Errors Only",
+      "Agent Workflow",
+      "OTEL Root Spans",
+    ]);
+
+    expect(presets.find((preset) => preset.name === "Trace List")).toEqual(
+      expect.objectContaining({
+        isSystem: true,
+        description: "See one row per trace using the root observation",
+        tableName: TableViewPresetTableName.ObservationsEvents,
+        filters: [
+          {
+            column: "hasParentObservation",
+            type: "boolean",
+            operator: "=",
+            value: false,
+          },
+        ],
+      }),
+    );
+  });
+
+  it("resolves built-in system presets by id", async () => {
+    const { projectId } = await createOrgProjectAndApiKey();
+    const traceListPreset = getSystemTableViewPresetByTableAndId(
+      TableViewPresetTableName.ObservationsEvents,
+      "__langfuse_trace_list__",
+    );
+
+    expect(traceListPreset).not.toBeNull();
+
+    const preset = await TableViewService.getTableViewPresetsById(
+      "__langfuse_trace_list__",
+      projectId,
+    );
+
+    expect(preset).toEqual(
+      expect.objectContaining({
+        id: "__langfuse_trace_list__",
+        name: "Trace List",
+        projectId,
+        tableName: TableViewPresetTableName.ObservationsEvents,
+        filters: traceListPreset?.state.filters,
+      }),
+    );
   });
 
   it("deduplicates same-named events presets in favor of the canonical namespace", async () => {
