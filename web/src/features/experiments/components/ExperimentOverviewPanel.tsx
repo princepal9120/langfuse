@@ -1,9 +1,10 @@
 import { LocalIsoDate } from "@/src/components/LocalIsoDate";
-import Link from "next/link";
 import { useState } from "react";
 import { Button } from "@/src/components/ui/button";
 import { ExperimentComparisonSelector } from "./ExperimentComparisonSelector";
 import { ExperimentBaselineControls } from "./ExperimentBaselineControls";
+import Link from "next/link";
+import { ExperimentMetadataSection } from "./ExperimentMetadataSection";
 
 type ExperimentOverviewPanelProps = {
   projectId: string;
@@ -37,8 +38,8 @@ export function ExperimentOverviewPanel({
 }: ExperimentOverviewPanelProps) {
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
 
-  const provider = experiment?.metadata?.provider;
-  const model = experiment?.metadata?.model;
+  const { provider, model, ...metadataWithoutModelConfig } =
+    experiment?.metadata ?? {};
 
   // Get the first prompt name and version from the prompts array
   const [promptName, promptVersion] =
@@ -160,6 +161,10 @@ export function ExperimentOverviewPanel({
           onSelectedIdsChange={onComparisonIdsChange}
         />
       </div>
+
+      {hasBaseline && experiment ? (
+        <ExperimentMetadataSection metadata={metadataWithoutModelConfig} />
+      ) : null}
     </div>
   );
 }
