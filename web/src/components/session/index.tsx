@@ -625,6 +625,10 @@ export const SessionEventsPage: React.FC<{
     [],
   );
   const sessionEventsFilterConfig = React.useMemo(() => {
+    const facets = observationEventsFilterConfig.facets.filter(
+      (facet) => facet.column !== "sessionId" && facet.column !== "environment",
+    );
+
     return {
       ...observationEventsFilterConfig,
       tableName: sessionEventsTableName,
@@ -632,10 +636,7 @@ export const SessionEventsPage: React.FC<{
         ...observationEventsFilterConfig.columnDefinitions,
         positionInTraceColumn,
       ],
-      facets: observationEventsFilterConfig.facets.filter(
-        (facet) =>
-          facet.column !== "sessionId" && facet.column !== "environment",
-      ),
+      facets,
     };
   }, [positionInTraceColumn, sessionEventsTableName]);
   const [urlFiltersQuery] = useQueryParam("filter", StringParam);
@@ -713,13 +714,6 @@ export const SessionEventsPage: React.FC<{
         ) {
           return { ...column, options: scoreCategoryOptions };
         }
-
-        if (column.type === "numberObject" && column.id === "scores_avg") {
-          return filterOptions.scores_avg
-            ? { ...column, keyOptions: filterOptions.scores_avg }
-            : column;
-        }
-
         return column;
       });
   }, [filterOptions, sessionEventsFilterConfig.columnDefinitions]);

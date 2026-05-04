@@ -75,14 +75,18 @@ export function omitFilterFacets(
   }
 
   const omittedColumnSet = new Set(omittedColumns);
+  const remainingFacets = config.facets.filter(
+    (facet) => !omittedColumnSet.has(facet.column),
+  );
 
   return {
     ...config,
+    columnDefinitions: config.columnDefinitions.filter(
+      (column) => !omittedColumnSet.has(column.id),
+    ),
     defaultExpanded: config.defaultExpanded?.filter(
       (column) => !omittedColumnSet.has(column),
     ),
-    facets: config.facets.filter(
-      (facet) => !omittedColumnSet.has(facet.column),
-    ),
+    facets: remainingFacets,
   };
 }

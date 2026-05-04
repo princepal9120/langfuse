@@ -15,7 +15,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Tabs, TabsList, TabsTrigger } from "@/src/components/ui/tabs";
 import { Badge } from "@/src/components/ui/badge";
 import {
-  tracesTableColsWithOptions,
   singleFilter,
   availableTraceEvalVariables,
   datasetFormFilterColsWithOptions,
@@ -63,6 +62,11 @@ import { type PartialConfig } from "@/src/features/evals/types";
 import { type EvalCapabilities } from "@/src/features/evals/hooks/useEvalCapabilities";
 import { EvalVersionCallout } from "@/src/features/evals/components/eval-version-callout";
 import { Skeleton } from "@/src/components/ui/skeleton";
+import {
+  getTraceEvalFilterColumns,
+  preserveLegacyTraceEvalFilters,
+  sanitizeTraceEvalFilters,
+} from "@/src/features/evals/lib/traceEvalFilterColumns";
 import {
   Dialog,
   DialogBody,
@@ -343,6 +347,9 @@ export const InnerEvaluatorForm = (props: {
   const defaultTarget = defaultTargetResult.success
     ? defaultTargetResult.data
     : EvalTargetObject.EVENT;
+  const existingFilter = props.existingEvaluator?.filter
+    ? z.array(singleFilter).parse(props.existingEvaluator.filter)
+    : undefined;
 
   const form = useForm({
     resolver: zodResolver(evalConfigFormSchema),
@@ -351,8 +358,12 @@ export const InnerEvaluatorForm = (props: {
       scoreName:
         props.existingEvaluator?.scoreName ?? `${props.evalTemplate.name}`,
       target: defaultTarget,
-      filter: props.existingEvaluator?.filter
-        ? z.array(singleFilter).parse(props.existingEvaluator.filter)
+      filter: existingFilter
+        ? defaultTarget === EvalTargetObject.TRACE
+          ? props.disabled
+            ? existingFilter
+            : sanitizeTraceEvalFilters(existingFilter)
+          : existingFilter
         : defaultTarget === EvalTargetObject.TRACE
           ? // For new trace evaluators, exclude internal environments by default
             DEFAULT_TRACE_FILTER
@@ -557,7 +568,13 @@ export const InnerEvaluatorForm = (props: {
     const delay = values.delay * 1000; // convert to ms
     const sampling = values.sampling;
     const mapping = validatedVarMapping.data;
-    const filter = validatedFilter.data;
+    const filter =
+      props.mode === "edit" && isTraceTarget(values.target)
+        ? preserveLegacyTraceEvalFilters({
+            existingFilters: existingFilter,
+            submittedFilters: validatedFilter.data,
+          })
+        : validatedFilter.data;
     const scoreName = values.scoreName;
 
     // For modern targets, derive status from runOnLive
@@ -1010,7 +1027,7 @@ export const InnerEvaluatorForm = (props: {
                           allowPropagationFilters,
                         );
                       } else if (isTraceTarget(target)) {
-                        return tracesTableColsWithOptions(traceFilterOptions);
+                        return getTraceEvalFilterColumns(traceFilterOptions);
                       } else if (isExperimentTarget(target)) {
                         // Experiment evaluators - only dataset filter
                         return experimentEvalFilterColsWithOptions(
